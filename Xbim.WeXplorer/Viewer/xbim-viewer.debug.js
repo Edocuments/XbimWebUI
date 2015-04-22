@@ -117,6 +117,12 @@ function xViewer(canvas) {
 	 */
 	this.autoZoomRelationalDistance = 0;
 
+	/**
+	 * The speed at which you scroll into the model when using the mouse wheel
+	 * @member {Number} xViewer#scrollSpeed
+	 */
+	this.scrollSpeed = 1;
+
     /** 
     * Clipping plane [a, b, c, d] defined as normal equation of the plane ax + by + cz + d = 0. [0,0,0,0] is for no clipping plane.
     * @member {Number[]} xViewer#_clippingPlane
@@ -769,6 +775,18 @@ xViewer.prototype._initMouseEvents = function () {
 
     }
 
+	function getScrollSpeed() {
+		var speedCfg = viewer.scrollSpeed*1;
+		if(!isNaN(speedCfg))
+		{
+			return speedCfg;
+		}
+		else
+		{
+			return 1;
+		}
+	}
+
     function handleMouseScroll(event) {
         if (viewer.navigationMode == 'none') {
             return;
@@ -785,7 +803,7 @@ xViewer.prototype._initMouseEvents = function () {
         }
 
         //deltaX and deltaY have very different values in different web browsers so fixed value is used for constant functionality.
-        navigate('zoom', sign(event.deltaX) * -1.0, sign(event.deltaY) * -1.0);
+        navigate('zoom', sign(event.deltaX) * -getScrollSpeed(), sign(event.deltaY) * -getScrollSpeed());
     }
 
     function navigate(type, deltaX, deltaY) {
