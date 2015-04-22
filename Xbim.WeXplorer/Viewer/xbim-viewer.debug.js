@@ -123,6 +123,12 @@ function xViewer(canvas) {
 	 */
 	this.scrollSpeed = 1;
 
+	/**
+	 * The speed at which you pan across the model
+	 * @member {Number} xViewer#panSpeed
+	 */
+	this.panSpeed = 1;
+
     /** 
     * Clipping plane [a, b, c, d] defined as normal equation of the plane ax + by + cz + d = 0. [0,0,0,0] is for no clipping plane.
     * @member {Number[]} xViewer#_clippingPlane
@@ -727,6 +733,18 @@ xViewer.prototype._initMouseEvents = function () {
         viewer._enableTextSelection();
     }
 
+	function getPanSpeed() {
+		var speedCfg = viewer.panSpeed*1;
+		if(!isNaN(speedCfg))
+		{
+			return speedCfg;
+		}
+		else
+		{
+			return 1;
+		}
+	}
+
     function handleMouseMove(event) {
         if (!mouseDown) {
             return;
@@ -770,7 +788,7 @@ xViewer.prototype._initMouseEvents = function () {
             }
         }
         if (button == 'middle') {
-            navigate('pan', deltaX, deltaY);
+            navigate('pan', (deltaX*0.5)*getPanSpeed(), (deltaY*0.5)*getPanSpeed());
         }
 
     }
