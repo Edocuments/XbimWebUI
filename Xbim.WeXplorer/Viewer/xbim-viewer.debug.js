@@ -475,10 +475,23 @@ xViewer.prototype.setCameraTarget = function (prodId) {
 * @function xViewer#set
 * @param {Object} settings - Object containing key - value pairs
 */
-xViewer.prototype.set = function (settings) {
-    for (key in settings) {
-        this[key] = settings[key];
-    }
+xViewer.prototype.set = function(settings) {
+	if(arguments.length === 2)
+	{
+		var sets = {};
+		sets[arguments[0]] = arguments[1];
+		this.set(sets);
+	}
+	else
+	{
+		for(var key in settings)
+		{
+			if(settings.hasOwnProperty(key))
+			{
+				this[key] = settings[key];
+			}
+		}
+	}
 };
 
 /**
