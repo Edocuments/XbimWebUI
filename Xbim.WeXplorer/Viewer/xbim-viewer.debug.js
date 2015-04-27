@@ -957,32 +957,32 @@ xViewer.prototype._initKeyboardEvents = function () {
 			var left = keysDown.indexOf(65) + keysDown.indexOf(37) > -2;
 			var right = keysDown.indexOf(68) + keysDown.indexOf(39) > -2;
 			var back = keysDown.indexOf(83) + keysDown.indexOf(40) > -2;
-			var up = keysDown.indexOf(32);
-			var down = keysDown.indexOf(18);
+			var up = keysDown.indexOf(32) > -1;
+			var down = keysDown.indexOf(18) > -1;
 
 			if(forward)
 			{
 				navigate('zoom',0.4,0.4);
 			}
+			else if(back)
+			{
+				navigate('zoom',-0.4,-0.4);
+			}
 			if(left)
 			{
 				navigate('pan',2,0);
 			}
-			if(back)
-			{
-				navigate('zoom',-0.4,-0.4);
-			}
-			if(right)
+			else if(right)
 			{
 				navigate('pan',-2,0);
 			}
 			if(up)
 			{
-				navigate('pan',0,-2);
-			}
-			if(down)
-			{
 				navigate('pan',0,2);
+			}
+			else if(down)
+			{
+				navigate('pan',0,-2);
 			}
 		}
 		setTimeout(processPressedKeys,20);
