@@ -98,7 +98,7 @@ function xViewer(canvas) {
     this.lightB = [0, -500000, 50000, 0.2];
 
     /**
-    * Switch between different navidation modes for left mouse button. Allowed values: <strong> 'pan', 'zoom', 'orbit' (or 'fixed-orbit') , 'free-orbit' and 'none'</strong>. Default value is <strong>'orbit'</strong>;
+    * Switch between different navidation modes for left mouse button. Allowed values: <strong> 'pan', 'zoom', 'orbit' (or 'fixed-orbit') , 'free-orbit', 'fly' and 'none'</strong>. Default value is <strong>'orbit'</strong>;
     * @member {String} xViewer#navigationMode
     */
     this.navigationMode = 'orbit';
@@ -219,6 +219,8 @@ function xViewer(canvas) {
     this._initAttributesAndUniforms();
     //init mouse events to capture user interaction
     this._initMouseEvents();
+    //init keyboard events to capture user interaction
+    this._initKeyboardEvents();
 
     //set back face culling. This might be usefull for certain kinds of visualization like x-ray mode where it will make model more transparent
     //gl.enable(gl.CULL_FACE);
@@ -746,51 +748,61 @@ xViewer.prototype._initMouseEvents = function () {
 	}
 
     function handleMouseMove(event) {
-        if (!mouseDown) {
+        if(viewer.navigationMode === 'none')
+		{
             return;
         }
 
-        if (viewer.navigationMode == 'none') {
+        if(!mouseDown && viewer.navigationMode !== 'fly')
+		{
             return;
         }
+		else
+		{
+			if(!mouseDown && viewer.navigationMode === 'fly')
+			{
+				button = 'none';
+			}
+			var newX = event.clientX;
+			var newY = event.clientY;
 
-        var newX = event.clientX;
-        var newY = event.clientY;
+			var deltaX = newX - lastMouseX;
+			var deltaY = newY - lastMouseY;
 
-        var deltaX = newX - lastMouseX;
-        var deltaY = newY - lastMouseY;
+			lastMouseX = newX;
+			lastMouseY = newY;
 
-        lastMouseX = newX;
-        lastMouseY = newY;
+			if (button == 'left') {
+				switch (viewer.navigationMode) {
+					case 'free-orbit':
+						navigate('free-orbit', deltaX, deltaY);
+						break;
 
-        if (button == 'left') {
-            switch (viewer.navigationMode) {
-                case 'free-orbit':
-                    navigate('free-orbit', deltaX, deltaY);
-                    break;
+					case 'fixed-orbit':
+					case 'orbit':
+						navigate('orbit', deltaX, deltaY);
+						break;
 
-                case 'fixed-orbit':
-                case 'orbit':
-                    navigate('orbit', deltaX, deltaY);
-                    break;
+					case 'pan':
+						navigate('pan', deltaX, deltaY);
+						break;
 
-                case 'pan':
-                    navigate('pan', deltaX, deltaY);
-                    break;
+					case 'zoom':
+						navigate('zoom', deltaX, deltaY);
+						break;
 
-                case 'zoom':
-                    navigate('zoom', deltaX, deltaY);
-                    break;
+					default:
+						break;
 
-                default:
-                    break;
-
-            }
-        }
-        if (button == 'middle') {
-            navigate('pan', (deltaX*0.5)*getPanSpeed(), (deltaY*0.5)*getPanSpeed());
-        }
-
+				}
+			}
+			if (button == 'middle') {
+				navigate('pan', (deltaX*0.5)*getPanSpeed(), (deltaY*0.5)*getPanSpeed());
+			}
+			if(button === 'none') {
+				navigate('spin', -deltaX, -deltaY);
+			}
+		}
     }
 
 	function getScrollSpeed() {
@@ -825,12 +837,17 @@ xViewer.prototype._initMouseEvents = function () {
     }
 
     function navigate(type, deltaX, deltaY) {
+		if(!viewer._handles || !viewer._handles[0]) return;
         //translation in WCS is position from [0, 0, 0]
         var origin = viewer._origin;
         var camera = viewer.getCameraPosition();
 
         //get origin coordinates in view space
         var mvOrigin = vec3.transformMat4(vec3.create(), origin, viewer._mvMatrix)
+		if(viewer.navigationMode === 'fly')
+		{
+			mvOrigin = vec3.transformMat4(vec3.create(), camera, viewer._mvMatrix);
+		}
 
         //movement factor needs to be dependant on the distance but one meter is a minimum so that movement wouldn't stop when camera is in 0 distance from navigation origin
         var distanceVec = vec3.subtract(vec3.create(), origin, camera);
@@ -849,6 +866,10 @@ xViewer.prototype._initMouseEvents = function () {
                 transform = mat4.rotate(mat4.create(), transform, degToRad(deltaY / 4), [1, 0, 0]);
                 transform = mat4.rotate(mat4.create(), transform, degToRad(deltaX / 4), [0, 1, 0]);
                 break;
+
+			case 'spin':
+				return navigate('orbit', deltaX * -1.2, deltaY * -1.2);
+				break;
 
             case 'fixed-orbit':
             case 'orbit':
@@ -893,12 +914,12 @@ xViewer.prototype._initMouseEvents = function () {
         }
     }, 500);
 
-
+	viewer._canvas.setAttribute("tabindex",-1);
     //attach callbacks
-    this._canvas.addEventListener('mousedown', handleMouseDown, true);
-    this._canvas.addEventListener('wheel', handleMouseScroll, true);
-    window.addEventListener('mouseup', handleMouseUp, true);
-    window.addEventListener('mousemove', handleMouseMove, true);
+    viewer._canvas.addEventListener('mousedown', handleMouseDown, true);
+    viewer._canvas.addEventListener('wheel', handleMouseScroll, true);
+    viewer._canvas.addEventListener('mouseup', handleMouseUp, true);
+    viewer._canvas.addEventListener('mousemove', handleMouseMove, true);
 
     /**
     * Occurs when user double clicks on model.
@@ -907,7 +928,138 @@ xViewer.prototype._initMouseEvents = function () {
     * @type {object}
     * @param {Number} id - product ID of the element or null if there wasn't any product under mouse
     */
-    this._canvas.addEventListener('dblclick', function () { viewer._fire('dblclick', { id: id }); }, true);
+    viewer._canvas.addEventListener('dblclick', function () { viewer._fire('dblclick', { id: id }); }, true);
+};
+
+xViewer.prototype._initKeyboardEvents = function () {
+    var viewer = this;
+
+	var interestingKeys = [87,83,65,68,38,40,37,39,18,32];
+    var keysDown = [];
+	/*
+	 * W - 87
+	 * S - 83
+	 * A - 65
+	 * D - 68
+	 *
+	 * Up - 38
+	 * Down - 40
+	 * Left - 37
+	 * Right - 39
+	 *
+	 * Alt - 18
+	 * Space - 32
+	 */
+	function processPressedKeys() {
+		if(keysDown.length > 0)
+		{
+			var forward = keysDown.indexOf(87) + keysDown.indexOf(38) > -2;
+			var left = keysDown.indexOf(65) + keysDown.indexOf(37) > -2;
+			var right = keysDown.indexOf(68) + keysDown.indexOf(39) > -2;
+			var back = keysDown.indexOf(83) + keysDown.indexOf(40) > -2;
+			var up = keysDown.indexOf(32);
+			var down = keysDown.indexOf(18);
+
+			if(forward)
+			{
+				navigate('zoom',0.4,0.4);
+			}
+			if(left)
+			{
+				navigate('pan',2,0);
+			}
+			if(back)
+			{
+				navigate('zoom',-0.4,-0.4);
+			}
+			if(right)
+			{
+				navigate('pan',-2,0);
+			}
+			if(up)
+			{
+				navigate('pan',0,-2);
+			}
+			if(down)
+			{
+				navigate('pan',0,2);
+			}
+		}
+		setTimeout(processPressedKeys,20);
+	}
+
+	function handleKeyUp(event) {
+		if(viewer.navigationMode === 'fly' && interestingKeys.indexOf(event.keyCode) > -1)
+		{
+			var key = event.keyCode;
+			var keyDownLoc = keysDown.indexOf(key);
+			if(keyDownLoc > -1) keysDown.splice(keyDownLoc,1);
+			event.preventDefault();
+			return false;
+		}
+	}
+
+	function handleKeyDown(event) {
+		if(viewer.navigationMode === 'fly' && interestingKeys.indexOf(event.keyCode) > -1)
+		{
+			var key = event.keyCode;
+			if(keysDown.indexOf(key) === -1) keysDown.push(key);
+			event.preventDefault();
+			return false;
+		}
+	}
+
+	function navigate(type, deltaX, deltaY) {
+		if(!viewer._handles || !viewer._handles[0]) return;
+		//translation in WCS is position from [0, 0, 0]
+		var origin = viewer._origin;
+		var camera = viewer.getCameraPosition();
+
+		//get origin coordinates in view space
+		var mvOrigin = vec3.transformMat4(vec3.create(), origin, viewer._mvMatrix)
+
+		//movement factor needs to be dependant on the distance but one meter is a minimum so that movement wouldn't stop when camera is in 0 distance from navigation origin
+		var distanceVec = vec3.subtract(vec3.create(), origin, camera);
+		var distance = Math.max(vec3.length(distanceVec), viewer._handles[0]._model.meter);
+
+		//move to the navigation origin in view space
+		var transform = mat4.translate(mat4.create(), mat4.create(), mvOrigin)
+
+		//function for conversion from degrees to radians
+		function degToRad(deg) {
+			return deg * Math.PI / 180.0;
+		}
+
+		switch(type) {
+
+			case 'pan':
+				mat4.translate(transform, transform, [deltaX * distance / 150, 0, 0]);
+				mat4.translate(transform, transform, [0, (-1.0 * deltaY) * distance / 150, 0]);
+				break;
+
+			case 'zoom':
+				mat4.translate(transform, transform, [0, 0, deltaX * distance / 20]);
+				mat4.translate(transform, transform, [0, 0, deltaY * distance / 20]);
+				break;
+
+			default:
+				break;
+		}
+
+		//reverse the translation in view space and leave only navigation changes
+		var translation = vec3.negate(vec3.create(), mvOrigin);
+		transform = mat4.translate(mat4.create(), transform, translation);
+
+		//apply transformation in right order
+		viewer._mvMatrix = mat4.multiply(mat4.create(), transform, viewer._mvMatrix);
+	}
+
+	//attach keyboard event callbacks
+	viewer._canvas.setAttribute("tabindex",-1);
+	viewer._canvas.addEventListener('keydown', handleKeyDown, true);
+	viewer._canvas.addEventListener('keyup', handleKeyUp, true);
+
+	processPressedKeys();
 };
 
 /**
