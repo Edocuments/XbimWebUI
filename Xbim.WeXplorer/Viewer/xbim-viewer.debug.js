@@ -934,40 +934,61 @@ xViewer.prototype._initMouseEvents = function () {
 xViewer.prototype._initKeyboardEvents = function () {
     var viewer = this;
 
-	var interestingKeys = [87,83,65,68,81,69,82,67,38,40,37,39,18,32];
     var keysDown = [];
-	/*
-	 * W - 87
-	 * S - 83
-	 * A - 65
-	 * D - 68
-	 *
-	 * Q - 81
-	 * E - 69
-	 * R - 82
-	 * C - 67
-	 *
-	 * Up - 38
-	 * Down - 40
-	 * Left - 37
-	 * Right - 39
-	 *
-	 * Alt - 18
-	 * Space - 32
-	 */
+
+	var keysByCode = {
+		87: 'W',
+		83: 'S',
+		65: 'A',
+		68: 'D',
+
+		81: 'Q',
+		69: 'E',
+		82: 'R',
+		67: 'C',
+
+		33: 'PageUp',
+		34: 'PageDown',
+
+		38: 'Up',
+		40: 'Down',
+		37: 'Left',
+		39: 'Right',
+
+		18: 'Alt',
+		32: 'Space'
+	};
+	var watchedKeys = Object.keys(keysByCode);
+	var keysByText = {};
+	for(var i=0,c=watchedKeys.length;i<c;i++)
+	{
+		keysByText[keysByCode[watchedKeys[i]]] = watchedKeys[i];
+	}
+
+	function keyIsDown(key) {
+		var args = Array.prototype.slice.call(arguments);
+		for(var i=0,c=args.length;i<c;i++)
+		{
+			var key = args[i];
+			if(typeof key === "number" && keysDown.indexOf(''+key) > -1) return true;
+			else if(keysDown.indexOf(''+keysByText[key]) > -1) return true;
+		}
+		return false;
+	};
+
 	function processPressedKeys() {
 		if(keysDown.length > 0)
 		{
-			var forward = keysDown.indexOf(87) + keysDown.indexOf(38) > -2;
-			var lookLeft = keysDown.indexOf(81) > -1;
-			var lookRight = keysDown.indexOf(69) > -1;
-			var lookUp = keysDown.indexOf(82) > -1;
-			var lookDown = keysDown.indexOf(67) > -1;
-			var left = keysDown.indexOf(65) + keysDown.indexOf(37) > -2;
-			var right = keysDown.indexOf(68) + keysDown.indexOf(39) > -2;
-			var back = keysDown.indexOf(83) + keysDown.indexOf(40) > -2;
-			var up = keysDown.indexOf(32) > -1;
-			var down = keysDown.indexOf(18) > -1;
+			var lookLeft = keyIsDown('Q');
+			var lookRight = keyIsDown('E');
+			var lookUp = keyIsDown('R','PageUp');
+			var lookDown = keyIsDown('C','PageDown');
+			var forward = keyIsDown('W','Up');
+			var left = keyIsDown('A','Left');
+			var right = keyIsDown('D','Right');
+			var back = keyIsDown('S','Down');
+			var up = keyIsDown('Space');
+			var down = keyIsDown('Alt');
 
 			if(forward)
 			{
@@ -1014,9 +1035,9 @@ xViewer.prototype._initKeyboardEvents = function () {
 	}
 
 	function handleKeyUp(event) {
-		if(viewer.navigationMode === 'fly' && interestingKeys.indexOf(event.keyCode) > -1)
+		if(viewer.navigationMode === 'fly' && watchedKeys.indexOf(''+event.keyCode) > -1)
 		{
-			var key = event.keyCode;
+			var key = ''+event.keyCode;
 			var keyDownLoc = keysDown.indexOf(key);
 			if(keyDownLoc > -1) keysDown.splice(keyDownLoc,1);
 			event.preventDefault();
@@ -1025,9 +1046,9 @@ xViewer.prototype._initKeyboardEvents = function () {
 	}
 
 	function handleKeyDown(event) {
-		if(viewer.navigationMode === 'fly' && interestingKeys.indexOf(event.keyCode) > -1)
+		if(viewer.navigationMode === 'fly' && watchedKeys.indexOf(''+event.keyCode) > -1)
 		{
-			var key = event.keyCode;
+			var key = ''+event.keyCode;
 			if(keysDown.indexOf(key) === -1) keysDown.push(key);
 			event.preventDefault();
 			return false;
