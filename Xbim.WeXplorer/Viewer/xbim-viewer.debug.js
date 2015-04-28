@@ -934,7 +934,7 @@ xViewer.prototype._initMouseEvents = function () {
 xViewer.prototype._initKeyboardEvents = function () {
     var viewer = this;
 
-	var interestingKeys = [87,83,65,68,81,69,38,40,37,39,18,32];
+	var interestingKeys = [87,83,65,68,81,69,82,67,38,40,37,39,18,32];
     var keysDown = [];
 	/*
 	 * W - 87
@@ -944,6 +944,8 @@ xViewer.prototype._initKeyboardEvents = function () {
 	 *
 	 * Q - 81
 	 * E - 69
+	 * R - 82
+	 * C - 67
 	 *
 	 * Up - 38
 	 * Down - 40
@@ -957,8 +959,10 @@ xViewer.prototype._initKeyboardEvents = function () {
 		if(keysDown.length > 0)
 		{
 			var forward = keysDown.indexOf(87) + keysDown.indexOf(38) > -2;
-			var turnLeft = keysDown.indexOf(81) > -1;
-			var turnRight = keysDown.indexOf(69) > -1;
+			var lookLeft = keysDown.indexOf(81) > -1;
+			var lookRight = keysDown.indexOf(69) > -1;
+			var lookUp = keysDown.indexOf(82) > -1;
+			var lookDown = keysDown.indexOf(67) > -1;
 			var left = keysDown.indexOf(65) + keysDown.indexOf(37) > -2;
 			var right = keysDown.indexOf(68) + keysDown.indexOf(39) > -2;
 			var back = keysDown.indexOf(83) + keysDown.indexOf(40) > -2;
@@ -989,13 +993,21 @@ xViewer.prototype._initKeyboardEvents = function () {
 			{
 				navigate('pan',0,-2);
 			}
-			if(turnLeft)
+			if(lookLeft)
 			{
 				navigate('orbit',-2,0);
 			}
-			else if(turnRight)
+			else if(lookRight)
 			{
 				navigate('orbit',2,0);
+			}
+			if(lookUp)
+			{
+				navigate('orbit',0,-2);
+			}
+			else if(lookDown)
+			{
+				navigate('orbit',0,2);
 			}
 		}
 		setTimeout(processPressedKeys,20);
