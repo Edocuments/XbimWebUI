@@ -992,27 +992,27 @@ xViewer.prototype._initKeyboardEvents = function () {
 
 			if(forward)
 			{
-				navigate('zoom',0.4,0.4);
+				navigate('zoom', 0.2 * viewer.scrollSpeed, 0.2 * viewer.scrollSpeed);
 			}
 			else if(back)
 			{
-				navigate('zoom',-0.4,-0.4);
+				navigate('zoom', -0.2 * viewer.scrollSpeed, -0.2 * viewer.scrollSpeed);
 			}
 			if(left)
 			{
-				navigate('pan',2,0);
+				navigate('pan', 5 * viewer.panSpeed, 0);
 			}
 			else if(right)
 			{
-				navigate('pan',-2,0);
+				navigate('pan', -5 * viewer.panSpeed, 0);
 			}
 			if(up)
 			{
-				navigate('pan',0,2);
+				navigate('pan', 0, 5 * viewer.panSpeed);
 			}
 			else if(down)
 			{
-				navigate('pan',0,-2);
+				navigate('pan', 0, -5 * viewer.panSpeed);
 			}
 			if(lookLeft)
 			{
