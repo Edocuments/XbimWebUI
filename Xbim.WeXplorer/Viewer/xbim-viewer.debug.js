@@ -748,7 +748,7 @@ xViewer.prototype._initMouseEvents = function () {
 	}
 
     function handleMouseMove(event) {
-        if(viewer.navigationMode === 'none')
+        if(viewer.navigationMode === 'none' || event.target !== viewer._canvas)
 		{
             return;
         }
@@ -759,10 +759,15 @@ xViewer.prototype._initMouseEvents = function () {
         }
 		else
 		{
-			if(!mouseDown && viewer.navigationMode === 'fly')
+			if(!mouseDown && document.activeElement === viewer._canvas && viewer.navigationMode === 'fly')
 			{
 				button = 'none';
 			}
+			else if(!mouseDown)
+			{
+				button = 'L';
+			}
+
 			var newX = event.clientX;
 			var newY = event.clientY;
 
