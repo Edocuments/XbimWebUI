@@ -116,6 +116,24 @@ function xViewer(canvas) {
     */
     this.renderingMode = 'normal';
 
+	/**
+	 * When focusing on an entity, this method will reduce the zoom distance relational to the size of the model.
+	 * @member {Number} xViewer#autoZoomRelationalDistance
+	 */
+	this.autoZoomRelationalDistance = 0;
+
+	/**
+	 * The speed at which you scroll into the model when using the mouse wheel
+	 * @member {Number} xViewer#scrollSpeed
+	 */
+	this.scrollSpeed = 1;
+
+	/**
+	 * The speed at which you pan across the model
+	 * @member {Number} xViewer#panSpeed
+	 */
+	this.panSpeed = 1;
+
     /** 
 	 * When focusing on an entity, this method will reduce the zoom distance relational to the size of the model.
 	 * @member {Number} xViewer#autoZoomRelationalDistance
