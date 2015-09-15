@@ -117,6 +117,24 @@ function xViewer(canvas) {
     this.renderingMode = 'normal';
 
     /** 
+	 * When focusing on an entity, this method will reduce the zoom distance relational to the size of the model.
+	 * @member {Number} xViewer#autoZoomRelationalDistance
+	 */
+	this.autoZoomRelationalDistance = 0;
+
+	/**
+	 * The speed at which you scroll into the model when using the mouse wheel
+	 * @member {Number} xViewer#scrollSpeed
+	 */
+	this.scrollSpeed = 1;
+
+	/**
+	 * The speed at which you pan across the model
+	 * @member {Number} xViewer#panSpeed
+	 */
+	this.panSpeed = 1;
+
+    /**
     * Clipping plane [a, b, c, d] defined as normal equation of the plane ax + by + cz + d = 0. [0,0,0,0] is for no clipping plane.
     * @member {Number[]} xViewer#_clippingPlane
     * @private
@@ -194,6 +212,8 @@ function xViewer(canvas) {
 
     //Navigation settings - coordinates in the WCS of the origin used for orbiting and panning
     this._origin = [0, 0, 0]
+    //Default distance when the model first loads, used to get idea of model size
+    this._baseDistance = 0;
     //Default distance for default views (top, bottom, left, right, front, back)
     this._distance = 0;
     //shader program used for rendering
@@ -496,7 +516,8 @@ xViewer.prototype.setCameraTarget = function (prodId) {
     var setDistance = function (bBox) {
         var size = Math.max(bBox[3], bBox[4], bBox[5]);
         var ratio = Math.max(viewer._width, viewer._height) / Math.min(viewer._width, viewer._height);
-        viewer._distance = size / Math.tan(viewer.perspectiveCamera.fov * Math.PI / 360.0) * ratio * 1.0;
+        viewer._distance = size / Math.tan(viewer.perspectiveCamera.fov * Math.PI / 360.0) * ratio * 1.2;
+		if(viewer._baseDistance) viewer._distance += viewer._baseDistance * viewer.autoZoomRelationalDistance;
     }
 
     //set navigation origin and default distance to the product BBox
@@ -527,6 +548,7 @@ xViewer.prototype.setCameraTarget = function (prodId) {
             if (region) {
                 this._origin = [region.centre[0], region.centre[1], region.centre[2]]
                 setDistance(region.bbox);
+				if(!viewer._baseDistance) viewer._baseDistance = viewer._distance;
             }
         }
         return true;
@@ -538,10 +560,23 @@ xViewer.prototype.setCameraTarget = function (prodId) {
 * @function xViewer#set
 * @param {Object} settings - Object containing key - value pairs
 */
-xViewer.prototype.set = function (settings) {
-    for (key in settings) {
-        this[key] = settings[key];
-    }
+xViewer.prototype.set = function(settings) {
+	if(arguments.length === 2)
+	{
+		var sets = {};
+		sets[arguments[0]] = arguments[1];
+		this.set(sets);
+	}
+	else
+	{
+		for(var key in settings)
+		{
+			if(settings.hasOwnProperty(key))
+			{
+				this[key] = settings[key];
+			}
+		}
+	}
 };
 
 /**
@@ -780,72 +815,106 @@ xViewer.prototype._initMouseEvents = function () {
         viewer._enableTextSelection();
     }
 
-    function handleMouseMove(event) {
-        if (!mouseDown) {
-            return;
-        }
+	function getPanSpeed() {
+		var speedCfg = viewer.panSpeed*1;
+		if(!isNaN(speedCfg))
+		{
+			return speedCfg;
+		}
+		else
+		{
+			return 1;
+		}
+	}
 
+	function handleMouseMove(event) {
+		if(viewer.navigationMode === 'none' || event.target !== viewer._canvas)
+		{
+			return;
+		}
+		else
+		{
+			if(!mouseDown && document.activeElement === viewer._canvas)
+			{
+				button = 'none';
+			}
+			else if(!mouseDown)
+			{
+				button = 'L';
+			}
+
+			var newX = event.clientX;
+			var newY = event.clientY;
+
+			var deltaX = newX - lastMouseX;
+			var deltaY = newY - lastMouseY;
+
+			lastMouseX = newX;
+			lastMouseY = newY;
+
+			if (button == 'left') {
+				switch (viewer.navigationMode) {
+					case 'free-orbit':
+						navigate('free-orbit', deltaX, deltaY);
+						break;
+
+					case 'fixed-orbit':
+					case 'orbit':
+						navigate('orbit', deltaX, deltaY);
+						break;
+
+					case 'pan':
+						navigate('pan', deltaX, deltaY);
+						break;
+
+					case 'zoom':
+						navigate('zoom', deltaX, deltaY);
+						break;
+
+					default:
+						break;
+
+				}
+			}
+			if (button == 'middle') {
+				navigate('pan', (deltaX*0.5)*getPanSpeed(), (deltaY*0.5)*getPanSpeed());
+			}
+			if(button === 'none') {
+				navigate('spin', -deltaX, -deltaY);
+			}
+		}
+	}
+
+	function getScrollSpeed() {
+		var speedCfg = viewer.scrollSpeed*1;
+		if(!isNaN(speedCfg))
+		{
+			return speedCfg;
+		}
+		else
+		{
+			return 1;
+		}
+	}
+
+	function handleMouseScroll(event) {
         if (viewer.navigationMode == 'none') {
-            return;
-        }
-
-        var newX = event.clientX;
-        var newY = event.clientY;
-
-        var deltaX = newX - lastMouseX;
-        var deltaY = newY - lastMouseY;
-
-        lastMouseX = newX;
-        lastMouseY = newY;
-
-        if (button == 'left') {
-            switch (viewer.navigationMode) {
-                case 'free-orbit':
-                    navigate('free-orbit', deltaX, deltaY);
-                    break;
-
-                case 'fixed-orbit':
-                case 'orbit':
-                    navigate('orbit', deltaX, deltaY);
-                    break;
-
-                case 'pan':
-                    navigate('pan', deltaX, deltaY);
-                    break;
-
-                case 'zoom':
-                    navigate('zoom', deltaX, deltaY);
-                    break;
-
-                default:
-                    break;
-
-            }
-        }
-        if (button == 'middle') {
-            navigate('pan', deltaX, deltaY);
-        }
-
-    }
-
-    function handleMouseScroll(event) {
-        if (viewer.navigationMode == 'none') {
-            return;
-        }
+			return;
+		}
         if (event.stopPropagation) {
-            event.stopPropagation();
-            event.cancelBubble = true;
-        }
-        function sign(x) {
-            x = +x // convert to a number
+			event.stopPropagation();
+			event.cancelBubble = true;
+		}
+		function sign(x) {
+			x = +x // convert to a number
             if (x === 0 || isNaN(x))
-                return x
-            return x > 0 ? 1 : -1
-        }
+				return x
+			return x > 0 ? 1 : -1
+		}
 
-        //deltaX and deltaY have very different values in different web browsers so fixed value is used for constant functionality.
-        navigate('zoom', sign(event.deltaX) * -1.0, sign(event.deltaY) * -1.0);
-    }
+		//deltaX and deltaY have very different values in different web browsers so fixed value is used for constant functionality.
+		navigate('zoom', sign(event.deltaX) * -getScrollSpeed(), sign(event.deltaY) * -getScrollSpeed());
+	}
 
     function navigate(type, deltaX, deltaY) {
         //translation in WCS is position from [0, 0, 0]
@@ -916,12 +985,12 @@ xViewer.prototype._initMouseEvents = function () {
         }
     }, 500);
 
-
+	viewer._canvas.setAttribute("tabindex",-1);
     //attach callbacks
-    this._canvas.addEventListener('mousedown', handleMouseDown, true);
-    this._canvas.addEventListener('wheel', handleMouseScroll, true);
-    window.addEventListener('mouseup', handleMouseUp, true);
-    window.addEventListener('mousemove', handleMouseMove, true);
+    viewer._canvas.addEventListener('mousedown', handleMouseDown, true);
+    viewer._canvas.addEventListener('wheel', handleMouseScroll, true);
+    viewer._canvas.addEventListener('mouseup', handleMouseUp, true);
+    viewer._canvas.addEventListener('mousemove', handleMouseMove, true);
 
     this._canvas.addEventListener('mousemove', function() {
         viewer._userAction = true;
@@ -935,7 +1004,7 @@ xViewer.prototype._initMouseEvents = function () {
     * @type {object}
     * @param {Number} id - product ID of the element or null if there wasn't any product under mouse
     */
-    this._canvas.addEventListener('dblclick', function () { viewer._fire('dblclick', { id: id }); }, true);
+    viewer._canvas.addEventListener('dblclick', function () { viewer._fire('dblclick', { id: id }); }, true);
 };
 
 /**
