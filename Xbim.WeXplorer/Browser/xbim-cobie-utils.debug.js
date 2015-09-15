@@ -275,7 +275,7 @@ xCobieUtils.prototype.getAttributes = function (entity) {
     var result = [];
     var attributes = null;
     for (var a in entity) {
-        if (entity[a].Attribute) {
+        if (entity[a] && entity[a].Attribute) {
             attributes = entity[a].Attribute;
             break;
         }
@@ -361,7 +361,7 @@ xCobieUtils.prototype.getIssues = function (entity) {
     var result = [];
 
     for (var attr in entity) {
-        if (entity[attr].Issue) {
+        if (entity[attr] && entity[attr].Issue) {
             var issues = entity[attr].Issue
             for (var i = 0; i < issues.length; i++) {
                 var issue = issues[i]
