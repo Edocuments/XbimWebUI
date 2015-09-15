@@ -503,10 +503,70 @@ xViewer.prototype.resetStyles = function () {
 xViewer.prototype.getProductType = function (prodId) {
     for (var i in this._handles) {
         var map = this._handles[i]._model.productMap;
+        if(map instanceof Array === false) return map[prodId] ? map[prodId].type : null;
         var prod = map.filter(function (e) { return e.productID == prodId }).pop();
         if (prod) return prod.type;
         else return null;
     }
+};
+
+/**
+*
+* @function xViewer#getProductsByType
+* @return {Array | Object} Array of products matching the specified type, or if no type is specified, an object with all found types as keys to their associated product arrays
+* @param {Number} Product type ID, this value can be obtained from the xProductType global object.
+*/
+xViewer.prototype.getProductsByType = function (type) {
+	if(typeof type === "undefined")
+	{
+		var products = {};
+		for (var i in this._handles) {
+			var map = this._handles[i]._model.productMap;
+			if(map instanceof Array === false)
+			{
+				Object.keys(map).forEach(function(key) {
+					if(map[key].type)
+					{
+						products[map[key].type] = products[map[key].type] || [];
+						products[map[key].type].push(map[key]);
+					}
+				});
+			}
+			else
+			{
+				map.forEach(function (e) {
+					if(e.type)
+					{
+						products[e.type] = products[e.type] || [];
+						products[e.type].push(e);
+					}
+				});
+			}
+		}
+		return products;
+	}
+	else
+	{
+		var products = [];
+		for (var i in this._handles) {
+			var map = this._handles[i]._model.productMap;
+			if(map instanceof Array === false)
+			{
+				Object.keys(map).forEach(function(key) {
+					if(map[key].type === type)
+					{
+						products.push(map[key]);
+					}
+				});
+			}
+			else
+			{
+				var prods = map.filter(function (e) { return e.type === type; });
+				products = products.concat(prods);
+			}
+		}
+		return products;
+	}
 };
 
 /**
