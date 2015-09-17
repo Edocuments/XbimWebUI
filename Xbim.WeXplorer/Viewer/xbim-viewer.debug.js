@@ -502,11 +502,9 @@ xViewer.prototype.resetStyles = function () {
 */
 xViewer.prototype.getProductType = function (prodId) {
     for (var i in this._handles) {
-        var map = this._handles[i]._model.productMap;
-        if(map instanceof Array === false) return map[prodId] ? map[prodId].type : null;
-        var prod = map.filter(function (e) { return e.productID == prodId }).pop();
-        if (prod) return prod.type;
-        else return null;
+        var map = this._handles[i].getProductMap(prodId);
+        if (map) return map.type;
+        return null;
     }
 };
 
@@ -522,26 +520,13 @@ xViewer.prototype.getProductsByType = function (type) {
 		var products = {};
 		for (var i in this._handles) {
 			var map = this._handles[i]._model.productMap;
-			if(map instanceof Array === false)
-			{
-				Object.keys(map).forEach(function(key) {
-					if(map[key].type)
-					{
-						products[map[key].type] = products[map[key].type] || [];
-						products[map[key].type].push(map[key]);
-					}
-				});
-			}
-			else
-			{
-				map.forEach(function (e) {
-					if(e.type)
-					{
-						products[e.type] = products[e.type] || [];
-						products[e.type].push(e);
-					}
-				});
-			}
+			Object.keys(map).forEach(function(key) {
+				if(map[key].type)
+				{
+					products[map[key].type] = products[map[key].type] || [];
+					products[map[key].type].push(map[key]);
+				}
+			});
 		}
 		return products;
 	}
@@ -550,20 +535,12 @@ xViewer.prototype.getProductsByType = function (type) {
 		var products = [];
 		for (var i in this._handles) {
 			var map = this._handles[i]._model.productMap;
-			if(map instanceof Array === false)
-			{
-				Object.keys(map).forEach(function(key) {
-					if(map[key].type === type)
-					{
-						products.push(map[key]);
-					}
-				});
-			}
-			else
-			{
-				var prods = map.filter(function (e) { return e.type === type; });
-				products = products.concat(prods);
-			}
+			Object.keys(map).forEach(function(key) {
+				if(map[key].type === type)
+				{
+					products.push(map[key]);
+				}
+			});
 		}
 		return products;
 	}
