@@ -219,9 +219,14 @@ xModelGeometry.prototype.load = function (source) {
     var br = new xBinaryReader();
     var self = this;
     br.onloaded = function () {
-        self.parse(br);
-        if (self.onloaded) {
-            self.onloaded();
+        try {
+            self.parse(br);
+            if (self.onloaded) {
+                self.onloaded();
+            }
+        }
+        catch(e) {
+            br.onerror(e);
         }
     };
     br.onerror = function (msg) {
