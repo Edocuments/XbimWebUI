@@ -116,12 +116,6 @@ function xViewer(canvas) {
     */
     this.renderingMode = 'normal';
 
-    /**
-    * When focusing on an entity, this method will reduce the zoom distance relational to the size of the model.
-    * @member {Number} xViewer#autoZoomRelationalDistance
-    */
-    this.autoZoomRelationalDistance = 0;
-
     /** 
     * Clipping plane [a, b, c, d] defined as normal equation of the plane ax + by + cz + d = 0. [0,0,0,0] is for no clipping plane.
     * @member {Number[]} xViewer#_clippingPlane
@@ -200,8 +194,6 @@ function xViewer(canvas) {
 
     //Navigation settings - coordinates in the WCS of the origin used for orbiting and panning
     this._origin = [0, 0, 0]
-    //Default distance when the model first loads, used to get idea of model size
-    this._baseDistance = 0;
     //Default distance for default views (top, bottom, left, right, front, back)
     this._distance = 0;
     //shader program used for rendering
@@ -503,8 +495,7 @@ xViewer.prototype.setCameraTarget = function (prodId) {
     var setDistance = function (bBox) {
         var size = Math.max(bBox[3], bBox[4], bBox[5]);
         var ratio = Math.max(viewer._width, viewer._height) / Math.min(viewer._width, viewer._height);
-        viewer._distance = size / Math.tan(viewer.perspectiveCamera.fov * Math.PI / 360.0) * ratio * 1.2;
-        if(viewer._baseDistance) viewer._distance += viewer._baseDistance * viewer.autoZoomRelationalDistance;
+        viewer._distance = size / Math.tan(viewer.perspectiveCamera.fov * Math.PI / 360.0) * ratio * 1.0;
     }
 
     //set navigation origin and default distance to the product BBox
@@ -535,7 +526,6 @@ xViewer.prototype.setCameraTarget = function (prodId) {
             if (region) {
                 this._origin = [region.centre[0], region.centre[1], region.centre[2]]
                 setDistance(region.bbox);
-                if(!viewer._baseDistance) viewer._baseDistance = viewer._distance;
             }
         }
         return true;
@@ -548,21 +538,8 @@ xViewer.prototype.setCameraTarget = function (prodId) {
 * @param {Object} settings - Object containing key - value pairs
 */
 xViewer.prototype.set = function (settings) {
-    if(arguments.length === 2)
-    {
-        var sets = {};
-        sets[arguments[0]] = arguments[1];
-        this.set(sets);
-    }
-    else
-    {
-        for(var key in settings)
-        {
-            if(settings.hasOwnProperty(key))
-            {
-                this[key] = settings[key];
-            }
-        }
+    for (key in settings) {
+        this[key] = settings[key];
     }
 };
 
@@ -1409,21 +1386,26 @@ xViewer.prototype._getSVGOverlay = function () {
     var ns = "http://www.w3.org/2000/svg";
 
     function getOffsetRect(elem) {
-        var box = elem.getBoundingClientRect()
+        var box = elem.getBoundingClientRect();
 
-        var body = document.body
-        var docElem = document.documentElement
+        var body = document.body;
+        var docElem = document.documentElement;
 
-        var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop
-        var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft
+        var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop;
+        var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft;
 
-        var clientTop = docElem.clientTop || body.clientTop || 0
-        var clientLeft = docElem.clientLeft || body.clientLeft || 0
+        var clientTop = docElem.clientTop || body.clientTop || 0;
+        var clientLeft = docElem.clientLeft || body.clientLeft || 0;
+        var clientBottom = docElem.clientBottom || body.clientBottom || 0;
+        var clientRight = docElem.clientRight || body.clientRight || 0;
 
-        var top = box.top + scrollTop - clientTop
-        var left = box.left + scrollLeft - clientLeft
 
-        return { top: Math.round(top), left: Math.round(left) }
+        var top = Math.round(box.top + scrollTop - clientTop);
+        var left = Math.round(box.left + scrollLeft - clientLeft);
+        var bottom = Math.round(box.top + scrollTop - clientBottom);
+        var right = Math.round(box.left + scrollLeft - clientRight);
+
+        return { top: top, left: left, width: right - left, height: bottom - top };
     }
 
     //create SVG overlay

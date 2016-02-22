@@ -64,7 +64,7 @@ xModelGeometry.prototype.parse = function (binReader) {
     this.normals = new Uint8Array(numTriangles * 6);
     this.indices = new Float32Array(numTriangles * 3);
     this.styleIndices = new Uint16Array(numTriangles * 3);
-    this.styles = new Uint8Array(square(1, numStyles * 4));
+    this.styles = new Uint8Array(square(1, (numStyles + 1) * 4)); //+1 is for a default style
     this.products = new Float32Array(numTriangles * 3);
     this.states = new Uint8Array(numTriangles * 3 * 2); //place for state and restyling
     this.transformations = new Float32Array(numTriangles * 3);
@@ -99,7 +99,8 @@ xModelGeometry.prototype.parse = function (binReader) {
         }
         return null;
     };
-    for (var iStyle = 0; iStyle < numStyles; iStyle++) {
+    var iStyle = 0;
+    for (iStyle; iStyle < numStyles; iStyle++) {
         var styleId = br.readInt32();
         var R = br.readFloat32() * 255;
         var G = br.readFloat32() * 255;
@@ -108,6 +109,10 @@ xModelGeometry.prototype.parse = function (binReader) {
         this.styles.set([R, G, B, A], iStyle * 4);
         styleMap.push({ id: styleId, index: iStyle, transparent: A < 254 });
     }
+    this.styles.set([255, 255, 255, 255], iStyle * 4);
+    var defaultStyle = { id: -1, index: iStyle, transparent: A < 254 }
+    styleMap.push(defaultStyle);
+
     for (var i = 0; i < numProducts ; i++) {
         var productLabel = br.readInt32();
         var prodType = br.readInt16();
@@ -134,14 +139,14 @@ xModelGeometry.prototype.parse = function (binReader) {
             var transformation = null;
 
             if (repetition > 1) {
-                transformation = br.readMatrix4x4();
+                transformation = version === 1 ? br.readFloat32(16) : br.readFloat64(16);
                 this.matrices.set(transformation, iMatrix);
                 iMatrix += 16;
             }
 
             var styleItem = styleMap.getStyle(styleId);
             if (styleItem === null)
-                throw 'Style index not found.';
+                styleItem = defaultStyle;
 
             shapeList.push({
                 pLabel: prodLabel,
@@ -172,7 +177,16 @@ xModelGeometry.prototype.parse = function (binReader) {
 
             var begin = iIndex;
             var map = this.productMap[shape.pLabel];
-            if (typeof (map) === "undefined") throw "Product hasn't been defined before.";
+            if (typeof (map) === "undefined") {
+                //throw "Product hasn't been defined before.";
+                map = {
+                    productID: 0,
+                    type: typeEnum.IFCOPENINGELEMENT,
+                    bBox: new Float32Array(6),
+                    spans: []
+                };
+                this.productMap[shape.pLabel] = map;
+            }
 
             this.normals.set(shapeGeom.normals, iIndex * 2);
 

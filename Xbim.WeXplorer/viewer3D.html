@@ -18,7 +18,10 @@
   
         <script src="Plugins/NavigationCube/xbim-navigation-cube-shaders.debug.js"></script>
 	    <script src="Plugins/NavigationCube/xbim-navigation-cube.debug.js"></script>
-        <script src="Plugins/NavigationCube/xbim-navigation-cube-textures.debug.js"></script>
+	    <script src="Plugins/NavigationCube/xbim-navigation-cube-textures.debug.js"></script>
+
+        <script src="Plugins/NavigationHome/xbim-navigation-home-textures.debug.js"></script>
+        <script src="Plugins/NavigationHome/xbim-navigation-home.debug.js"></script>
         <style>
             html, body {
                 height: 100%;
@@ -184,7 +187,7 @@
 			    }
 			});
 			var model = "";
-			if (typeof (QueryString.model) == "undefined") model = "tests/data/LakesideRestaurant.wexbim";
+			if (typeof (QueryString.model) == "undefined") model = "tests/data/SampleHouse.wexbim";
 			else model = "tests/data/" + QueryString.model + ".wexbim";
 			viewer.show("back");
 			viewer.on("pick", function(arg){
@@ -257,8 +260,11 @@
 			    //viewer.zoomTo(id);
 			});
 
-			var cube = new xNavigationCube('xbim');
+			var cube = new xNavigationCube();
 			viewer.addPlugin(cube);
+
+			var home = new xNavigationHome();
+			viewer.addPlugin(home);
 
 		</script>
 	</body>

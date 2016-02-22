@@ -195,6 +195,17 @@ xBinaryReader.prototype.readMatrix4x4 = function (count) {
         result[i] = matrix;
     }
     return count === 1 ? result[0] : result;
+};
+xBinaryReader.prototype.readMatrix4x4_64 = function (count) {
+    if (typeof (count) === "undefined") count = 1;
+    var values = this.readFloat64(count * 16);
+    var result = new Array(count);
+    for (var i = 0; i < count; i++) {
+        var offset = i * 16 * 8;
+        var matrix = new Float64Array(values.buffer, offset, 16);
+        result[i] = matrix;
+    }
+    return count === 1 ? result[0] : result;
 };function xModelGeometry() {
     //all this data is to be fed into GPU as attributes
     this.normals = [];
@@ -331,7 +342,7 @@ xModelGeometry.prototype.parse = function (binReader) {
             var transformation = null;
 
             if (repetition > 1) {
-                transformation = br.readMatrix4x4();
+                transformation = version === 1 ? br.readFloat32(16) : br.readFloat64(16);
                 this.matrices.set(transformation, iMatrix);
                 iMatrix += 16;
             }
@@ -369,7 +380,16 @@ xModelGeometry.prototype.parse = function (binReader) {
 
             var begin = iIndex;
             var map = this.productMap[shape.pLabel];
-            if (typeof (map) === "undefined") throw "Product hasn't been defined before.";
+            if (typeof (map) === "undefined") {
+                //throw "Product hasn't been defined before.";
+                map = {
+                    productID: 0,
+                    type: typeEnum.IFCOPENINGELEMENT,
+                    bBox: new Float32Array(6),
+                    spans: []
+                };
+                this.productMap[shape.pLabel] = map;
+            }
 
             this.normals.set(shapeGeom.normals, iIndex * 2);
 
@@ -1798,6 +1818,7 @@ xViewer.prototype._initMouseEvents = function () {
     }
 
     function navigate(type, deltaX, deltaY) {
+        if(!viewer._handles || !viewer._handles[0]) return;
         //translation in WCS is position from [0, 0, 0]
         var origin = viewer._origin;
         var camera = viewer.getCameraPosition();
@@ -2337,21 +2358,26 @@ xViewer.prototype._getSVGOverlay = function () {
     var ns = "http://www.w3.org/2000/svg";
 
     function getOffsetRect(elem) {
-        var box = elem.getBoundingClientRect()
+        var box = elem.getBoundingClientRect();
 
-        var body = document.body
-        var docElem = document.documentElement
+        var body = document.body;
+        var docElem = document.documentElement;
 
-        var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop
-        var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft
+        var scrollTop = window.pageYOffset || docElem.scrollTop || body.scrollTop;
+        var scrollLeft = window.pageXOffset || docElem.scrollLeft || body.scrollLeft;
 
-        var clientTop = docElem.clientTop || body.clientTop || 0
-        var clientLeft = docElem.clientLeft || body.clientLeft || 0
+        var clientTop = docElem.clientTop || body.clientTop || 0;
+        var clientLeft = docElem.clientLeft || body.clientLeft || 0;
+        var clientBottom = docElem.clientBottom || body.clientBottom || 0;
+        var clientRight = docElem.clientRight || body.clientRight || 0;
 
-        var top = box.top + scrollTop - clientTop
-        var left = box.left + scrollLeft - clientLeft
 
-        return { top: Math.round(top), left: Math.round(left) }
+        var top = Math.round(box.top + scrollTop - clientTop);
+        var left = Math.round(box.left + scrollLeft - clientLeft);
+        var bottom = Math.round(box.top + scrollTop - clientBottom);
+        var right = Math.round(box.left + scrollLeft - clientRight);
+
+        return { top: top, left: left, width: right - left, height: bottom - top };
     }
 
     //create SVG overlay
